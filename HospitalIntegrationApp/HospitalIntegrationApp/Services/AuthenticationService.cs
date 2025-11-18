@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Data;
 using HospitalIntegrationApp.Factory;
-using HospitalIntegrationApp.Models;
+using HospitalIntegrationApp.Models
 
 
 namespace HospitalIntegrationApp.Services
@@ -9,6 +9,7 @@ namespace HospitalIntegrationApp.Services
     public class AuthenticationService
     {
         private readonly IDbFactory _factory;
+        private const int BCryptWorkFactor = 12;
 
         public AuthenticationService(IDbFactory factory)
         {
@@ -20,9 +21,24 @@ namespace HospitalIntegrationApp.Services
             user = GetUserByUsername(username);
             if (user == null) return false;
 
-            // NOTE: If your 'sifre' column stores plain text for now, compare directly.
-            // Switch to BCrypt.Verify when you migrate to hashed passwords.
-            return string.Equals(user.SifreHash ?? string.Empty, password ?? string.Empty, StringComparison.Ordinal);
+            var girilenParola = password ?? string.Empty;
+            var kayitliDeger = user.SifreHash ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(kayitliDeger)) return false;
+
+            var hashGibi = kayitliDeger.StartsWith("$2", StringComparison.Ordinal);
+            if (hashGibi)
+            {
+                return BCrypt.Net.BCrypt.Verify(girilenParola, kayitliDeger);
+            }
+
+            if (!string.Equals(kayitliDeger, girilenParola, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            var yeniHash = HashPassword(girilenParola);
+            TryUpgradeUserPasswordHash(user.KullaniciId, yeniHash);
+            return true;
         }
 
         public HospitalIntegrationApp.Models.User GetUserByUsername(string username)
@@ -58,9 +74,42 @@ namespace HospitalIntegrationApp.Services
 
         public string HashPassword(string plainPassword)
         {
-            // Placeholder for future migration to hashed passwords (BCrypt recommended)
-            // return BCrypt.Net.BCrypt.HashPassword(plainPassword, workFactor: 12);
-            return plainPassword;
+            if (string.IsNullOrEmpty(plainPassword))
+            {
+                throw new ArgumentException("Parola değeri boş olamaz.", nameof(plainPassword));
+            }
+
+            return BCrypt.Net.BCrypt.HashPassword(plainPassword, workFactor: BCryptWorkFactor);
+        }
+
+        private void TryUpgradeUserPasswordHash(int userId, string yeniHash)
+        {
+            try
+            {
+                // Hash'lenmiş parolalar 60+ karakter olduğundan ilgili sütunun NVARCHAR olması gerekir.
+                using (var conn = _factory.CreateConnection())
+                {
+                    conn.Open();
+                    using (var cmd = _factory.CreateCommand("UPDATE `kullanıcı`.`kullanıcı` SET `sifre` = @hash WHERE `KullanıcıID` = @id", conn))
+                    {
+                        var hashParam = cmd.CreateParameter();
+                        hashParam.ParameterName = "@hash";
+                        hashParam.Value = yeniHash;
+                        cmd.Parameters.Add(hashParam);
+
+                        var idParam = cmd.CreateParameter();
+                        idParam.ParameterName = "@id";
+                        idParam.Value = userId;
+                        cmd.Parameters.Add(idParam);
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.TraceWarning("Parola hash'i güncellenirken hata oluştu: {0}", ex);
+            }
         }
     }
 }

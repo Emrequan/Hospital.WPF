@@ -67,3 +67,4 @@ SELECT 'DEVLET HASTALAR' AS tablo, COUNT(*) AS kayit_sayisi FROM devlet_db.devle
 
 
 
+

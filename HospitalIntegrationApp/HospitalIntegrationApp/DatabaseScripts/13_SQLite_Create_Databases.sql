@@ -32,3 +32,4 @@ SELECT 'VAKIF HASTALAR' AS tablo, COUNT(*) AS kayit_sayisi FROM vakif_hastalar;
 
 
 
+

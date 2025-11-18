@@ -27,3 +27,4 @@ SELECT 'MASTER_DB tablosu oluşturuldu' AS DURUM;
 
 
 
+

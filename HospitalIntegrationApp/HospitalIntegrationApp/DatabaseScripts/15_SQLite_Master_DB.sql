@@ -23,3 +23,4 @@ SELECT 'MASTER HASTALAR' AS tablo, COUNT(*) AS kayit_sayisi FROM master_hastalar
 
 
 
+
