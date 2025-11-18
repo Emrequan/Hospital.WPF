@@ -151,6 +151,7 @@
     <Compile Include="Models\Models\user.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\AuthenticationService.cs" />
+    <Compile Include="Services\BcryptPasswordHasher.cs" />
     <Compile Include="Strategy\DevletStrategy.cs" />
     <Compile Include="Strategy\IHastaneStrategy.cs" />
     <Compile Include="Strategy\VakifStrategy.cs" />
